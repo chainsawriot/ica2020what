@@ -1,0 +1,14 @@
+```{r}
+require(tidyverse)
+ica <- rio::import('70th Annual ICA Conference_29FEB2020.csv') %>% as_tibble
+```
+
+
+
+
+
+
+
+
+
+
