@@ -1,14 +1,89 @@
+---
+title: "An analysis of the ICA 2020 program"
+output: github_document
+author:
+  - Chung-hong Chan ^[University of Mannheim]
+---
+
+
 ```{r}
 require(tidyverse)
-ica <- rio::import('70th Annual ICA Conference_29FEB2020.csv') %>% as_tibble
+require(textclean)
+require(quanteda)
+
+ica_raw <- rio::import('70th Annual ICA Conference_29FEB2020.csv') %>% as_tibble
+ica_raw
+```
+
+```{r}
+colnames(ica_raw)
+```
+
+I am only interested in a few columns.
+
+```{r}
+colnames(ica_raw)[2] <- "event_type"
+colnames(ica_raw)[3] <- "event_group"
+colnames(ica_raw)[5] <- "start_time"
+colnames(ica_raw)[8] <- "event_info"
+colnames(ica_raw)[17] <- "abstract"
+ica_raw %>% count(event_type) -> all_event_types
+### I am only interested in these sessions.
+all_event_types[c(5, 6, 7, 8, 9, 11, 14),]
+```
+
+```{r, results = 'asis'}
+##probably not the cleanest.
+
+ica_raw %>% filter(event_type %in% all_event_types$event_type[c(5, 6, 7, 8, 9, 11, 14)]) %>% mutate(abstract = str_remove(replace_html(abstract), "^Abstracts? ?B?o?d?y?:? ?")) %>% filter(abstract != "") -> ica
+ica %>% count(event_group, sort = TRUE) %>% add_count(wt = n, name = "total") %>% mutate(procent = round((n / total) * 100,2)) %>% select(-total) %>% knitr::kable()
+```
+
+```{r}
+abstract_corpus <- corpus(ica$abstract)
+docvars(abstract_corpus, "group") <- ica$event_group
+```
+
+```{r}
+dfm(abstract_corpus, tolower = TRUE, stem = TRUE, remove_punct = TRUE, remove_symbols = TRUE, remove = stopwords('en')) %>% dfm_select("^[A-Za-z]+$", valuetype = 'regex') -> abstract_dfm
+```
+
+Top Features of all ICA abstracts.
+
+```{r}
+topfeatures(abstract_dfm, n = 50)
+```
+
+# What the "big 10" scholars are writing?
+
+## Health Communication
+
+```{r hc}
+textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Health Communication") %>% textplot_keyness
+```
+
+## CAT
+
+```{r cat}
+textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Communication and Technology") %>% textplot_keyness
+```
+
+## JSD
+
+```{r jsd}
+textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Journalism Studies") %>% textplot_keyness
 ```
 
 
 
-
-
-
-
-
-
+|Health Communication                                  | 267|    9.93|
+|Communication and Technology                          | 232|    8.63|
+|Journalism Studies                                    | 199|    7.40|
+|Political Communication                               | 192|    7.14|
+|Mass Communication                                    | 153|    5.69|
+|Information Systems                                   | 141|    5.25|
+|Public Relations                                      |  88|    3.27|
+|Interpersonal Communication                           |  78|    2.90|
+|Computational Methods                                 |  71|    2.64|
+|Media Industry Studies                                |  71|    2.64|
 
