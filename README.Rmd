@@ -107,21 +107,42 @@ textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Theme
 ```{r}
 uni_groups <- unique(docvars(abstract_dfm, "group"))
 group_dfm <- map(uni_groups, ~ apply(dfm_subset(abstract_dfm, group == .), 2, sum))
+names(group_dfm) <- uni_groups
 
 ## How similar is PolCom 3 and JSD 12
 
 require(lsa)
-
-cosine(group_dfm[[3]], group_dfm[[12]])
+## So ugly
+cosine(group_dfm['Political Communication'][[1]], group_dfm['Journalism Studies'][[1]])
 ```
 
 ```{r}
 ## Polcom 3 and Comm Law 4
-cosine(group_dfm[[3]], group_dfm[[4]])
+cosine(group_dfm['Political Communication'][[1]], group_dfm['Communication Law and Policy'][[1]])
 ```
 
 ```{r}
 t(combn(uni_groups, 2)) %>% as_tibble(.name_repair = "minimal") -> pairs
 colnames(pairs) <- c('gp1', 'gp2')
 
+get_cosine <- function(gp1, gp2, group_dfm) {
+    cosine(group_dfm[gp1][[1]], group_dfm[gp2][[1]])[1,1]
+}
+
+get_cosine("Political Communication", "Theme", group_dfm)
+```
+
+```{r network}
+pairs %>% mutate(weight = map2_dbl(gp1, gp2, get_cosine, group_dfm = group_dfm)) -> pairs
+require(igraph)
+
+ica_graph <- graph_from_data_frame(pairs, directed = FALSE)
+### Not informative at all
+plot(ica_graph)
+```
+
+Most similar
+
+```{r , results = 'asis'}
+pairs %>% arrange(desc(weight)) %>% head(n = 50) %>% knitr::kable()
 ```
