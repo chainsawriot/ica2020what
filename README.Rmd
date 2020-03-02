@@ -176,3 +176,32 @@ Rank division/IG by percetnage of non-US abstracts
 tibble(group = ica$event_group, country) %>% mutate(nonus = country != "us") %>% group_by(group) %>% summarise(totalnonus = sum(nonus), n = n()) %>% mutate(percent = round((totalnonus / n) * 100)) %>% arrange(desc(percent)) %>% knitr::kable()
 ```
 
+# Which groups need more chairs?
+
+```{r}
+str_extract(ica$event_info, "Expected Attendance:[0-9]+")
+```
+
+```{r}
+ica$expected_attendance <- str_extract(ica$event_info, "Expected Attendance:[0-9]+") %>% str_extract("[0-9]+") %>% as.numeric
+```
+
+```{r, results = "asis"}
+ica %>% group_by(event_group) %>% summarise(mean_ea  = mean(expected_attendance, na.rm = TRUE), media_ea = median(expected_attendance, na.rm = TRUE)) %>% arrange(desc(mean_ea)) %>% knitr::kable()
+```
+
+```{r}
+ica %>% group_by(event_group) %>% summarise(mean_ea  = mean(expected_attendance, na.rm = TRUE), media_ea = median(expected_attendance, na.rm = TRUE)) %>% arrange(desc(mean_ea)) %>% ggplot(aes(x = fct_reorder(event_group, mean_ea), y = mean_ea)) + geom_bar(stat = 'identity') + coord_flip() + xlab("Group") + ylab("Mean expected attendance")
+```
+
+Is there a US-bias in expected attendance (after adjusted for group and type)?
+
+```{r}
+require(MASS)
+ica$country <- predict(model) == "us"
+glm.nb(expected_attendance~event_group+event_type+country, data = ica) %>% summary
+```
+
+Not significant.
+
+
