@@ -6,7 +6,7 @@ author:
 ---
 
 
-```{r}
+```{r prepro1}
 require(tidyverse)
 require(textclean)
 require(quanteda)
@@ -21,7 +21,7 @@ colnames(ica_raw)
 
 I am only interested in a few columns.
 
-```{r}
+```{r prepro2}
 colnames(ica_raw)[2] <- "event_type"
 colnames(ica_raw)[3] <- "event_group"
 colnames(ica_raw)[5] <- "start_time"
@@ -32,19 +32,19 @@ ica_raw %>% count(event_type) -> all_event_types
 all_event_types[c(5, 6, 7, 8, 9, 11, 14),]
 ```
 
-```{r, results = 'asis'}
+```{r prepro3, results = 'asis'}
 ##probably not the cleanest.
 
 ica_raw %>% filter(event_type %in% all_event_types$event_type[c(5, 6, 7, 8, 9, 11, 14)]) %>% mutate(abstract = str_remove(replace_html(abstract), "^Abstracts? ?B?o?d?y?:? ?")) %>% filter(abstract != "") -> ica
 ica %>% count(event_group, sort = TRUE) %>% add_count(wt = n, name = "total") %>% mutate(percent = round((n / total) * 100,2)) %>% select(-total) %>% knitr::kable()
 ```
 
-```{r}
+```{r prepro4}
 abstract_corpus <- corpus(ica$abstract)
 docvars(abstract_corpus, "group") <- ica$event_group
 ```
 
-```{r}
+```{r prepro5}
 dfm(abstract_corpus, tolower = TRUE, stem = TRUE, remove_punct = TRUE, remove_symbols = TRUE, remove = stopwords('en')) %>% dfm_select("^[A-Za-z]+$", valuetype = 'regex') -> abstract_dfm
 ```
 
@@ -146,3 +146,33 @@ Most similar
 ```{r , results = 'asis'}
 pairs %>% arrange(desc(weight)) %>% head(n = 50) %>% knitr::kable()
 ```
+
+# Newsmap
+
+Classify all abstracts by the geographical prediction algorithm by Watanabe (2017) ^[Watanabe, K. (2018). Newsmap: A semi-supervised approach to geographical news classification. Digital Journalism, 6(3), 294-309.].
+
+```{r}
+require(newsmap)
+toks <- tokens(abstract_corpus, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE) %>% tokens_tolower %>% tokens_remove(stopwords('english'), valuetype = 'fixed', padding = TRUE)
+country_label <- tokens_lookup(toks, data_dictionary_newsmap_en, levels = 3)
+dfmt_label <- dfm(country_label)
+
+dfmt_feat <- dfm(toks) %>% dfm_select(pattern = "^[a-z]", selection = "keep", valuetype = "regex")
+
+model <- textmodel_newsmap(dfmt_feat, dfmt_label)
+coef(model, n = 7)[c("us", "gb", "de", "br", "jp", "hk", "cn")]
+```
+
+How US-centric is ICA?
+
+```{r, results = "asis"}
+country <- predict(model)
+tibble(country) %>% count(country, sort = TRUE) %>% add_count(wt = n, name = 'totaln') %>% mutate(percent = round((n / totaln) * 100, 2)) %>% select(country, percent) %>% knitr::kable()
+```
+
+Rank division/IG by percetnage of non-US abstracts
+
+```{r, results = "asis"}
+tibble(group = ica$event_group, country) %>% mutate(nonus = country != "us") %>% group_by(group) %>% summarise(totalnonus = sum(nonus), n = n()) %>% mutate(percent = round((totalnonus / n) * 100)) %>% arrange(desc(percent)) %>% knitr::kable()
+```
+

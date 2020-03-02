@@ -422,4 +422,166 @@ pairs %>% arrange(desc(weight)) %>% head(n = 50) %>% knitr::kable()
 | Interpersonal Communication                | Information Systems                                   |  0.6979278|
 | Ethnicity and Race in Communication        | Sponsored Sessions                                    |  0.6964196|
 
+Newsmap
+=======
+
+Classify all abstracts by the geographical prediction algorithm by Watanabe (2017) [2].
+
+``` r
+require(newsmap)
+```
+
+    ## Loading required package: newsmap
+
+``` r
+toks <- tokens(abstract_corpus, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE) %>% tokens_tolower %>% tokens_remove(stopwords('english'), valuetype = 'fixed', padding = TRUE)
+country_label <- tokens_lookup(toks, data_dictionary_newsmap_en, levels = 3)
+dfmt_label <- dfm(country_label)
+
+dfmt_feat <- dfm(toks) %>% dfm_select(pattern = "^[a-z]", selection = "keep", valuetype = "regex")
+
+model <- textmodel_newsmap(dfmt_feat, dfmt_label)
+coef(model, n = 7)[c("us", "gb", "de", "br", "jp", "hk", "cn")]
+```
+
+    ## $us
+    ##          us    american        york   americans trafficking  washington 
+    ##    6.374726    6.022749    4.969946    4.571916    4.061091    3.900748 
+    ##       e-cig 
+    ##    3.856296 
+    ## 
+    ## $gb
+    ##          uk      london   migrators       e-cig franchisees     tapinto 
+    ##    5.881744    5.639182    5.233717    4.798399    4.479945    4.415406 
+    ##    laughing 
+    ##    4.415406 
+    ## 
+    ## $de
+    ##     germany      german         und        nfcc instamancer       meier 
+    ##    6.217457    5.917353    5.629671    5.224205    4.793422    4.713380 
+    ##       gesis 
+    ##    4.626368 
+    ## 
+    ## $br
+    ##      brazil venezuelans        ncis     orleans   brazilian     roraima 
+    ##    5.829737    4.625764    4.507981    4.507981    4.374449    4.374449 
+    ##      fixers 
+    ##    4.374449 
+    ## 
+    ## $jp
+    ##         japan      japanese          midi         tokyo       koreans 
+    ##      5.696188      5.310525      5.310525      4.269071      4.269071 
+    ##       anime's skateboarding 
+    ##      4.086750      4.086750 
+    ## 
+    ## $hk
+    ##            kong              hk             yue     hongkongers     blue-ribbon 
+    ##        5.892231        4.864445        4.496720        4.378937        4.378937 
+    ## countermovement          youths 
+    ##        4.245406        4.245406 
+    ## 
+    ## $cn
+    ##       chinese         china     migrators           tcm           npd 
+    ##      7.554475      7.208458      5.089371      4.930307      4.698505 
+    ##          midi study-with-me 
+    ##      4.396224      4.335600
+
+How US-centric is ICA?
+
+``` r
+country <- predict(model)
+tibble(country) %>% count(country, sort = TRUE) %>% add_count(wt = n, name = 'totaln') %>% mutate(percent = round((n / totaln) * 100, 2)) %>% select(country, percent) %>% knitr::kable()
+```
+
+| country |  percent|
+|:--------|--------:|
+| us      |    61.79|
+| cn      |    24.96|
+| au      |     2.83|
+| gb      |     2.16|
+| de      |     1.34|
+| in      |     1.34|
+| hk      |     1.00|
+| nz      |     0.52|
+| tr      |     0.48|
+| kr      |     0.37|
+| sg      |     0.37|
+| fr      |     0.22|
+| ke      |     0.22|
+| br      |     0.15|
+| il      |     0.15|
+| no      |     0.15|
+| ph      |     0.15|
+| pl      |     0.15|
+| tw      |     0.15|
+| dk      |     0.11|
+| eg      |     0.11|
+| ng      |     0.11|
+| nl      |     0.11|
+| ru      |     0.11|
+| sy      |     0.11|
+| be      |     0.07|
+| ca      |     0.07|
+| es      |     0.07|
+| mx      |     0.07|
+| ua      |     0.07|
+| ae      |     0.04|
+| at      |     0.04|
+| ch      |     0.04|
+| fi      |     0.04|
+| gh      |     0.04|
+| id      |     0.04|
+| ir      |     0.04|
+| it      |     0.04|
+| jp      |     0.04|
+| rs      |     0.04|
+| sa      |     0.04|
+| za      |     0.04|
+
+Rank division/IG by percetnage of non-US abstracts
+
+``` r
+tibble(group = ica$event_group, country) %>% mutate(nonus = country != "us") %>% group_by(group) %>% summarise(totalnonus = sum(nonus), n = n()) %>% mutate(percent = round((totalnonus / n) * 100)) %>% arrange(desc(percent)) %>% knitr::kable()
+```
+
+| group                                                 |  totalnonus|    n|  percent|
+|:------------------------------------------------------|-----------:|----:|--------:|
+| Lesbian, Gay, Bisexual, Transgender and Queer Studies |          24|   36|       67|
+| Media Industry Studies                                |          47|   71|       66|
+| Interpersonal Communication                           |          48|   78|       62|
+| Public Diplomacy                                      |          15|   24|       62|
+| Human-Machine Communication                           |          33|   54|       61|
+| Intercultural Communication                           |          21|   35|       60|
+| Global Communication and Social Change                |          34|   58|       59|
+| Popular Communication                                 |          33|   58|       57|
+| Activism, Communication and Social Justice            |          32|   62|       52|
+| Intergroup Communication                              |          12|   25|       48|
+| Health Communication                                  |         118|  267|       44|
+| Mobile Communication                                  |          26|   59|       44|
+| Sponsored Sessions                                    |          30|   68|       44|
+| Sports Communication                                  |          20|   45|       44|
+| Game Studies                                          |          24|   57|       42|
+| Communication and Technology                          |          94|  232|       41|
+| Children, Adolescents and the Media                   |          23|   58|       40|
+| Ethnicity and Race in Communication                   |          23|   57|       40|
+| Communication Law and Policy                          |          11|   28|       39|
+| Feminist Scholarship                                  |          21|   55|       38|
+| Mass Communication                                    |          56|  153|       37|
+| Environmental Communication                           |          25|   69|       36|
+| Language and Social Interaction                       |          12|   33|       36|
+| Visual Communication Studies                          |          18|   52|       35|
+| Public Relations                                      |          28|   88|       32|
+| Information Systems                                   |          43|  141|       30|
+| Philosophy, Theory and Critique                       |          13|   44|       30|
+| Organizational Communication                          |          19|   69|       28|
+| Political Communication                               |          53|  192|       28|
+| Communication History                                 |           8|   34|       24|
+| Computational Methods                                 |          13|   71|       18|
+| Journalism Studies                                    |          36|  199|       18|
+| Instructional and Developmental Communication         |           9|   58|       16|
+| Communication Science, and Biology                    |           3|   30|       10|
+| Theme                                                 |           2|   28|        7|
+
 [1] University of Mannheim
+
+[2] Watanabe, K. (2018). Newsmap: A semi-supervised approach to geographical news classification. Digital Journalism, 6(3), 294-309.
