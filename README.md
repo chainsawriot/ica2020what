@@ -126,10 +126,10 @@ all_event_types[c(5, 6, 7, 8, 9, 11, 14),]
 ##probably not the cleanest.
 
 ica_raw %>% filter(event_type %in% all_event_types$event_type[c(5, 6, 7, 8, 9, 11, 14)]) %>% mutate(abstract = str_remove(replace_html(abstract), "^Abstracts? ?B?o?d?y?:? ?")) %>% filter(abstract != "") -> ica
-ica %>% count(event_group, sort = TRUE) %>% add_count(wt = n, name = "total") %>% mutate(procent = round((n / total) * 100,2)) %>% select(-total) %>% knitr::kable()
+ica %>% count(event_group, sort = TRUE) %>% add_count(wt = n, name = "total") %>% mutate(percent = round((n / total) * 100,2)) %>% select(-total) %>% knitr::kable()
 ```
 
-| event\_group                                          |   n | procent |
+| event\_group                                          |   n | percent |
 | :---------------------------------------------------- | --: | ------: |
 | Health Communication                                  | 267 |    9.93 |
 | Communication and Technology                          | 232 |    8.63 |
@@ -203,7 +203,7 @@ topfeatures(abstract_dfm, n = 50)
     ##       provid      increas     interact        model          two 
     ##          784          784          783          783          780
 
-# What the “big 10” scholars are writing?
+# What the “big 5” divisions are writing?
 
 ## Health Communication
 
@@ -229,8 +229,73 @@ textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Journ
 
 ![](README_files/figure-gfm/jsd-1.png)<!-- -->
 
-|Health Communication | 267| 9.93| |Communication and Technology | 232|
-8.63| |Journalism Studies | 199| 7.40| |Political Communication | 192|
-7.14| |Mass Communication | 153| 5.69| |Information Systems | 141| 5.25|
-|Public Relations | 88| 3.27| |Interpersonal Communication | 78| 2.90|
-|Computational Methods | 71| 2.64| |Media Industry Studies | 71| 2.64|
+## POLCOM
+
+``` r
+textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Political Communication") %>% textplot_keyness
+```
+
+![](README_files/figure-gfm/polcom-1.png)<!-- -->
+
+## MASSCOM
+
+``` r
+textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Mass Communication") %>% textplot_keyness
+```
+
+![](README_files/figure-gfm/masscom-1.png)<!-- -->
+
+and of course,
+
+## Computational methods
+
+``` r
+textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Computational Methods") %>% textplot_keyness
+```
+
+![](README_files/figure-gfm/comp-1.png)<!-- -->
+
+and
+
+## theme
+
+``` r
+textstat_keyness(abstract_dfm, target = docvars(abstract_dfm, "group") == "Theme") %>% textplot_keyness
+```
+
+![](README_files/figure-gfm/theme-1.png)<!-- -->
+
+# Similarity between groups
+
+``` r
+uni_groups <- unique(docvars(abstract_dfm, "group"))
+group_dfm <- map(uni_groups, ~ apply(dfm_subset(abstract_dfm, group == .), 2, sum))
+
+## How similar is PolCom 3 and JSD 12
+
+require(lsa)
+```
+
+    ## Loading required package: lsa
+
+    ## Loading required package: SnowballC
+
+``` r
+cosine(group_dfm[[3]], group_dfm[[12]])
+```
+
+    ##          [,1]
+    ## [1,] 0.770592
+
+``` r
+## Polcom 3 and Comm Law 4
+cosine(group_dfm[[3]], group_dfm[[4]])
+```
+
+    ##           [,1]
+    ## [1,] 0.5040687
+
+``` r
+t(combn(uni_groups, 2)) %>% as_tibble(.name_repair = "minimal") -> pairs
+colnames(pairs) <- c('gp1', 'gp2')
+```
