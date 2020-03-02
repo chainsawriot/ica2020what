@@ -1984,7 +1984,7 @@ ica %>% group_by(event_group) %>% summarise(mean_ea  = mean(expected_attendance,
 ica %>% group_by(event_group) %>% summarise(mean_ea  = mean(expected_attendance, na.rm = TRUE), media_ea = median(expected_attendance, na.rm = TRUE)) %>% arrange(desc(mean_ea)) %>% ggplot(aes(x = fct_reorder(event_group, mean_ea), y = mean_ea)) + geom_bar(stat = 'identity') + coord_flip() + xlab("Group") + ylab("Mean expected attendance")
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-13-1.png)
+![](README_files/figure-markdown_github/chairs-1.png)
 
 Is there a US-bias in expected attendance (after adjusted for group and type)?
 

@@ -190,7 +190,7 @@ ica$expected_attendance <- str_extract(ica$event_info, "Expected Attendance:[0-9
 ica %>% group_by(event_group) %>% summarise(mean_ea  = mean(expected_attendance, na.rm = TRUE), media_ea = median(expected_attendance, na.rm = TRUE)) %>% arrange(desc(mean_ea)) %>% knitr::kable()
 ```
 
-```{r}
+```{r chairs}
 ica %>% group_by(event_group) %>% summarise(mean_ea  = mean(expected_attendance, na.rm = TRUE), media_ea = median(expected_attendance, na.rm = TRUE)) %>% arrange(desc(mean_ea)) %>% ggplot(aes(x = fct_reorder(event_group, mean_ea), y = mean_ea)) + geom_bar(stat = 'identity') + coord_flip() + xlab("Group") + ylab("Mean expected attendance")
 ```
 
