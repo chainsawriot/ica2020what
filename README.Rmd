@@ -1,8 +1,11 @@
 ---
 title: "An analysis of the ICA 2020 program"
-output: github_document
 author:
   - Chung-hong Chan ^[University of Mannheim]
+output:
+  github_document:
+    toc: true
+    toc_depth: 1
 ---
 
 
@@ -147,7 +150,7 @@ Most similar
 pairs %>% arrange(desc(weight)) %>% head(n = 50) %>% knitr::kable()
 ```
 
-# Newsmap
+# Newsmap: US-Centrism
 
 Classify all abstracts by the geographical prediction algorithm by Watanabe (2017) ^[Watanabe, K. (2018). Newsmap: A semi-supervised approach to geographical news classification. Digital Journalism, 6(3), 294-309.].
 
@@ -204,4 +207,38 @@ glm.nb(expected_attendance~event_group+event_type+country, data = ica) %>% summa
 
 Not significant.
 
+# Why some presentations are early in the morning?
 
+```{r, results = "asis"}
+ica %>% count(start_time) %>% knitr::kable()
+```
+
+Starting time by group.
+
+```{r starting}
+
+time_conv <- function(date) {
+    res <- str_split(date, "[: ]")[[1]]
+    s <- 0
+    if (res[[3]] == "PM" & res[[1]] != "12") {
+        s <- s + (12 * 60)
+    }
+    s <- s + (as.numeric(res[[1]]) * 60) + as.numeric(res[[2]])
+    return(s)
+}
+
+ica %>% mutate(start_time2 = map_dbl(start_time, time_conv)) -> ica
+
+ica %>% group_by(event_group) %>% summarise(mean_start_time = mean(start_time2)) %>% arrange(mean_start_time) %>% ggplot(aes(x = fct_reorder(event_group, mean_start_time), y = mean_start_time)) + geom_bar(stat = 'identity') + coord_flip() + xlab("Group") + ylab("Mean starting time")
+```
+
+Is there a US-bias in starting time (after adjusted for group and type)?
+
+
+```{r}
+require(MASS)
+ica$country <- predict(model) == "us"
+glm.nb(start_time2~event_group+event_type+country, data = ica) %>% summary
+```
+
+Not significant.

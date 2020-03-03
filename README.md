@@ -2,6 +2,12 @@ An analysis of the ICA 2020 program
 ================
 Chung-hong Chan [1]
 
+-   [What the "big 5" divisions are writing?](#what-the-big-5-divisions-are-writing)
+-   [Similarity between groups](#similarity-between-groups)
+-   [Newsmap: US-Centrism](#newsmap-us-centrism)
+-   [Which groups need more chairs?](#which-groups-need-more-chairs)
+-   [Why some presentations are early in the morning?](#why-some-presentations-are-early-in-the-morning)
+
 ``` r
 require(tidyverse)
 ```
@@ -422,8 +428,8 @@ pairs %>% arrange(desc(weight)) %>% head(n = 50) %>% knitr::kable()
 | Interpersonal Communication                | Information Systems                                   |  0.6979278|
 | Ethnicity and Race in Communication        | Sponsored Sessions                                    |  0.6964196|
 
-Newsmap
-=======
+Newsmap: US-Centrism
+====================
 
 Classify all abstracts by the geographical prediction algorithm by Watanabe (2017) [2].
 
@@ -2201,6 +2207,254 @@ glm.nb(expected_attendance~event_group+event_type+country, data = ica) %>% summa
     ##           Std. Err.:  0.730 
     ## 
     ##  2 x log-likelihood:  -16109.137
+
+Not significant.
+
+Why some presentations are early in the morning?
+================================================
+
+``` r
+ica %>% count(start_time) %>% knitr::kable()
+```
+
+| start\_time |    n|
+|:------------|----:|
+| 11:00 AM    |  476|
+| 12:30 PM    |  283|
+| 12:45 PM    |    8|
+| 2:00 PM     |  498|
+| 3:30 PM     |  334|
+| 5:00 PM     |  125|
+| 5:15 PM     |   26|
+| 8:00 AM     |  463|
+| 9:30 AM     |  475|
+
+Starting time by group.
+
+``` r
+time_conv <- function(date) {
+    res <- str_split(date, "[: ]")[[1]]
+    s <- 0
+    if (res[[3]] == "PM" & res[[1]] != "12") {
+        s <- s + (12 * 60)
+    }
+    s <- s + (as.numeric(res[[1]]) * 60) + as.numeric(res[[2]])
+    return(s)
+}
+
+ica %>% mutate(start_time2 = map_dbl(start_time, time_conv)) -> ica
+
+ica %>% group_by(event_group) %>% summarise(mean_start_time = mean(start_time2)) %>% arrange(mean_start_time) %>% ggplot(aes(x = fct_reorder(event_group, mean_start_time), y = mean_start_time)) + geom_bar(stat = 'identity') + coord_flip() + xlab("Group") + ylab("Mean starting time")
+```
+
+![](README_files/figure-markdown_github/starting-1.png)
+
+Is there a US-bias in starting time (after adjusted for group and type)?
+
+``` r
+require(MASS)
+ica$country <- predict(model) == "us"
+glm.nb(start_time2~event_group+event_type+country, data = ica) %>% summary
+```
+
+    ## 
+    ## Call:
+    ## glm.nb(formula = start_time2 ~ event_group + event_type + country, 
+    ##     data = ica, init.theta = 21.71238599, link = log)
+    ## 
+    ## Deviance Residuals: 
+    ##     Min       1Q   Median       3Q      Max  
+    ## -2.1253  -0.8498  -0.1799   0.8499   2.1373  
+    ## 
+    ## Coefficients:
+    ##                                                                   Estimate
+    ## (Intercept)                                                       6.644347
+    ## event_groupChildren, Adolescents and the Media                    0.091473
+    ## event_groupCommunication and Technology                           0.043336
+    ## event_groupCommunication History                                  0.116873
+    ## event_groupCommunication Law and Policy                           0.069041
+    ## event_groupCommunication Science, and Biology                     0.279657
+    ## event_groupComputational Methods                                  0.215398
+    ## event_groupEnvironmental Communication                            0.096638
+    ## event_groupEthnicity and Race in Communication                   -0.013924
+    ## event_groupFeminist Scholarship                                   0.075719
+    ## event_groupGame Studies                                           0.193925
+    ## event_groupGlobal Communication and Social Change                -0.057645
+    ## event_groupHealth Communication                                   0.075493
+    ## event_groupHuman-Machine Communication                            0.192977
+    ## event_groupInformation Systems                                    0.174220
+    ## event_groupInstructional and Developmental Communication          0.200354
+    ## event_groupIntercultural Communication                            0.236548
+    ## event_groupIntergroup Communication                               0.046215
+    ## event_groupInterpersonal Communication                            0.070424
+    ## event_groupJournalism Studies                                     0.043092
+    ## event_groupLanguage and Social Interaction                        0.165498
+    ## event_groupLesbian, Gay, Bisexual, Transgender and Queer Studies -0.053179
+    ## event_groupMass Communication                                     0.122263
+    ## event_groupMedia Industry Studies                                 0.009957
+    ## event_groupMobile Communication                                  -0.006175
+    ## event_groupOrganizational Communication                           0.136395
+    ## event_groupPhilosophy, Theory and Critique                        0.061148
+    ## event_groupPolitical Communication                               -0.009521
+    ## event_groupPopular Communication                                  0.091935
+    ## event_groupPublic Diplomacy                                      -0.007083
+    ## event_groupPublic Relations                                       0.079255
+    ## event_groupSponsored Sessions                                     0.163713
+    ## event_groupSports Communication                                   0.227450
+    ## event_groupTheme                                                  0.044264
+    ## event_groupVisual Communication Studies                          -0.021153
+    ## event_typeHigh-Density Paper Session                             -0.289551
+    ## event_typeHybrid High-Density Session                            -0.287354
+    ## event_typeInnovative Format                                      -0.261012
+    ## event_typeInteractive Paper Session                               0.027289
+    ## event_typePanel Session                                          -0.133783
+    ## event_typeStandard Paper Session                                 -0.182870
+    ## countryTRUE                                                      -0.005253
+    ##                                                                  Std. Error
+    ## (Intercept)                                                        0.067440
+    ## event_groupChildren, Adolescents and the Media                     0.041833
+    ## event_groupCommunication and Technology                            0.031212
+    ## event_groupCommunication History                                   0.046544
+    ## event_groupCommunication Law and Policy                            0.051633
+    ## event_groupCommunication Science, and Biology                      0.052461
+    ## event_groupComputational Methods                                   0.039614
+    ## event_groupEnvironmental Communication                             0.040278
+    ## event_groupEthnicity and Race in Communication                     0.040885
+    ## event_groupFeminist Scholarship                                    0.040377
+    ## event_groupGame Studies                                            0.041625
+    ## event_groupGlobal Communication and Social Change                  0.040222
+    ## event_groupHealth Communication                                    0.033068
+    ## event_groupHuman-Machine Communication                             0.042553
+    ## event_groupInformation Systems                                     0.039951
+    ## event_groupInstructional and Developmental Communication           0.041718
+    ## event_groupIntercultural Communication                             0.047309
+    ## event_groupIntergroup Communication                                0.052698
+    ## event_groupInterpersonal Communication                             0.038909
+    ## event_groupJournalism Studies                                      0.033746
+    ## event_groupLanguage and Social Interaction                         0.046922
+    ## event_groupLesbian, Gay, Bisexual, Transgender and Queer Studies   0.050385
+    ## event_groupMass Communication                                      0.035128
+    ## event_groupMedia Industry Studies                                  0.038647
+    ## event_groupMobile Communication                                    0.040396
+    ## event_groupOrganizational Communication                            0.039950
+    ## event_groupPhilosophy, Theory and Critique                         0.043913
+    ## event_groupPolitical Communication                                 0.031922
+    ## event_groupPopular Communication                                   0.040404
+    ## event_groupPublic Diplomacy                                        0.055037
+    ## event_groupPublic Relations                                        0.037825
+    ## event_groupSponsored Sessions                                      0.038750
+    ## event_groupSports Communication                                    0.043817
+    ## event_groupTheme                                                   0.049864
+    ## event_groupVisual Communication Studies                            0.042318
+    ## event_typeHigh-Density Paper Session                               0.064224
+    ## event_typeHybrid High-Density Session                              0.065675
+    ## event_typeInnovative Format                                        0.090445
+    ## event_typeInteractive Paper Session                                0.062775
+    ## event_typePanel Session                                            0.061511
+    ## event_typeStandard Paper Session                                   0.061991
+    ## countryTRUE                                                        0.009026
+    ##                                                                  z value
+    ## (Intercept)                                                       98.522
+    ## event_groupChildren, Adolescents and the Media                     2.187
+    ## event_groupCommunication and Technology                            1.388
+    ## event_groupCommunication History                                   2.511
+    ## event_groupCommunication Law and Policy                            1.337
+    ## event_groupCommunication Science, and Biology                      5.331
+    ## event_groupComputational Methods                                   5.437
+    ## event_groupEnvironmental Communication                             2.399
+    ## event_groupEthnicity and Race in Communication                    -0.341
+    ## event_groupFeminist Scholarship                                    1.875
+    ## event_groupGame Studies                                            4.659
+    ## event_groupGlobal Communication and Social Change                 -1.433
+    ## event_groupHealth Communication                                    2.283
+    ## event_groupHuman-Machine Communication                             4.535
+    ## event_groupInformation Systems                                     4.361
+    ## event_groupInstructional and Developmental Communication           4.803
+    ## event_groupIntercultural Communication                             5.000
+    ## event_groupIntergroup Communication                                0.877
+    ## event_groupInterpersonal Communication                             1.810
+    ## event_groupJournalism Studies                                      1.277
+    ## event_groupLanguage and Social Interaction                         3.527
+    ## event_groupLesbian, Gay, Bisexual, Transgender and Queer Studies  -1.055
+    ## event_groupMass Communication                                      3.480
+    ## event_groupMedia Industry Studies                                  0.258
+    ## event_groupMobile Communication                                   -0.153
+    ## event_groupOrganizational Communication                            3.414
+    ## event_groupPhilosophy, Theory and Critique                         1.392
+    ## event_groupPolitical Communication                                -0.298
+    ## event_groupPopular Communication                                   2.275
+    ## event_groupPublic Diplomacy                                       -0.129
+    ## event_groupPublic Relations                                        2.095
+    ## event_groupSponsored Sessions                                      4.225
+    ## event_groupSports Communication                                    5.191
+    ## event_groupTheme                                                   0.888
+    ## event_groupVisual Communication Studies                           -0.500
+    ## event_typeHigh-Density Paper Session                              -4.508
+    ## event_typeHybrid High-Density Session                             -4.375
+    ## event_typeInnovative Format                                       -2.886
+    ## event_typeInteractive Paper Session                                0.435
+    ## event_typePanel Session                                           -2.175
+    ## event_typeStandard Paper Session                                  -2.950
+    ## countryTRUE                                                       -0.582
+    ##                                                                  Pr(>|z|)    
+    ## (Intercept)                                                       < 2e-16 ***
+    ## event_groupChildren, Adolescents and the Media                   0.028771 *  
+    ## event_groupCommunication and Technology                          0.164999    
+    ## event_groupCommunication History                                 0.012038 *  
+    ## event_groupCommunication Law and Policy                          0.181170    
+    ## event_groupCommunication Science, and Biology                    9.78e-08 ***
+    ## event_groupComputational Methods                                 5.41e-08 ***
+    ## event_groupEnvironmental Communication                           0.016429 *  
+    ## event_groupEthnicity and Race in Communication                   0.733426    
+    ## event_groupFeminist Scholarship                                  0.060754 .  
+    ## event_groupGame Studies                                          3.18e-06 ***
+    ## event_groupGlobal Communication and Social Change                0.151813    
+    ## event_groupHealth Communication                                  0.022433 *  
+    ## event_groupHuman-Machine Communication                           5.76e-06 ***
+    ## event_groupInformation Systems                                   1.30e-05 ***
+    ## event_groupInstructional and Developmental Communication         1.57e-06 ***
+    ## event_groupIntercultural Communication                           5.73e-07 ***
+    ## event_groupIntergroup Communication                              0.380504    
+    ## event_groupInterpersonal Communication                           0.070303 .  
+    ## event_groupJournalism Studies                                    0.201613    
+    ## event_groupLanguage and Social Interaction                       0.000420 ***
+    ## event_groupLesbian, Gay, Bisexual, Transgender and Queer Studies 0.291221    
+    ## event_groupMass Communication                                    0.000501 ***
+    ## event_groupMedia Industry Studies                                0.796673    
+    ## event_groupMobile Communication                                  0.878497    
+    ## event_groupOrganizational Communication                          0.000640 ***
+    ## event_groupPhilosophy, Theory and Critique                       0.163774    
+    ## event_groupPolitical Communication                               0.765496    
+    ## event_groupPopular Communication                                 0.022883 *  
+    ## event_groupPublic Diplomacy                                      0.897594    
+    ## event_groupPublic Relations                                      0.036141 *  
+    ## event_groupSponsored Sessions                                    2.39e-05 ***
+    ## event_groupSports Communication                                  2.09e-07 ***
+    ## event_groupTheme                                                 0.374701    
+    ## event_groupVisual Communication Studies                          0.617186    
+    ## event_typeHigh-Density Paper Session                             6.53e-06 ***
+    ## event_typeHybrid High-Density Session                            1.21e-05 ***
+    ## event_typeInnovative Format                                      0.003904 ** 
+    ## event_typeInteractive Paper Session                              0.663766    
+    ## event_typePanel Session                                          0.029634 *  
+    ## event_typeStandard Paper Session                                 0.003178 ** 
+    ## countryTRUE                                                      0.560592    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## (Dispersion parameter for Negative Binomial(21.7124) family taken to be 1)
+    ## 
+    ##     Null deviance: 3190.8  on 2687  degrees of freedom
+    ## Residual deviance: 2708.3  on 2646  degrees of freedom
+    ## AIC: 34712
+    ## 
+    ## Number of Fisher Scoring iterations: 1
+    ## 
+    ## 
+    ##               Theta:  21.712 
+    ##           Std. Err.:  0.606 
+    ## 
+    ##  2 x log-likelihood:  -34625.707
 
 Not significant.
 
